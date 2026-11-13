@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Wandelplanner</title>
+  <meta name="description" content="Plan wandelingen door heel Europa.">
+  <meta name="theme-color" content="#1f5c3f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Wandelplanner">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="map" aria-label="Kaart"></div>
+
+  <header class="topbar">
+    <div class="search">
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="searchInput" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Zoek een plaats in Europa" aria-label="Zoek een plaats">
+      <button id="searchClear" class="icon-btn small" type="button" aria-label="Zoekveld leegmaken" hidden>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <button id="listBtn" class="icon-btn raised" type="button" aria-label="Mijn wandelingen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg>
+    </button>
+    <ul id="searchResults" class="search-results" hidden></ul>
+  </header>
+
+  <div class="map-buttons">
+    <button id="layerBtn" class="icon-btn raised" type="button" aria-label="Kaartlagen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></svg>
+    </button>
+    <button id="locateBtn" class="icon-btn raised" type="button" aria-label="Mijn locatie" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+    </button>
+  </div>
+
+  <div id="layerMenu" class="popover" hidden>
+    <p class="popover-title">Kaart</p>
+    <label class="choice"><input type="radio" name="base" value="osm"> Standaard</label>
+    <label class="choice"><input type="radio" name="base" value="topo"> Topografisch</label>
+    <hr>
+    <label class="choice"><input type="checkbox" id="trailsToggle"> Wandelroutes tonen</label>
+  </div>
+
+  <section id="panel" class="panel" aria-label="Route">
+    <button id="panelToggle" class="panel-handle" type="button" aria-label="Paneel open- of dichtklappen" aria-expanded="false"><span></span></button>
+
+    <div id="emptyState" class="empty">
+      <p class="empty-title">Plan je wandeling</p>
+      <p class="empty-text">Tik op de kaart om je startpunt te zetten. Elk volgend punt wordt via wandelpaden verbonden.</p>
+    </div>
+
+    <div id="routeState" hidden>
+      <div class="stats">
+        <div class="stat"><span class="stat-value" id="statDist">0 km</span><span class="stat-label">Afstand</span></div>
+        <div class="stat"><span class="stat-value" id="statTime">–</span><span class="stat-label">Wandeltijd</span></div>
+        <div class="stat"><span class="stat-value" id="statUp">–</span><span class="stat-label">Stijgen / dalen</span></div>
+      </div>
+
+      <div class="panel-body">
+        <div id="profileWrap" class="profile" hidden>
+          <svg id="profileSvg" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true">
+            <path id="profileArea" class="profile-area" d=""/>
+            <path id="profileLine" class="profile-line" d=""/>
+            <line id="profileCursor" class="profile-cursor" x1="0" x2="0" y1="0" y2="80" visibility="hidden"/>
+          </svg>
+          <span class="profile-max" id="profileMax"></span>
+          <span class="profile-min" id="profileMin"></span>
+          <span class="profile-read" id="profileRead" hidden></span>
+        </div>
+        <p id="profileNote" class="note" hidden></p>
+
+        <div class="tools">
+          <button id="undoBtn" type="button" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5"/><path d="M4 12h10a6 6 0 0 1 0 12"/></svg>Stap terug</button>
+          <button id="loopBtn" type="button" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9"/><path d="M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5.3L4 15"/><path d="M4 20v-5h5"/></svg>Rondje</button>
+          <button id="reverseBtn" type="button" class="tool"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M7 4 3 8M7 4l4 4"/><path d="M17 20V4M17 20l-4-4M17 20l4-4"/></svg>Omkeren</button>
+          <button id="clearBtn" type="button" class="tool danger"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>Wissen</button>
+        </div>
+
+        <label class="pace">
+          <span>Tempo</span>
+          <select id="paceSelect" aria-label="Wandeltempo">
+            <option value="3.5">Rustig (3,5 km/u)</option>
+            <option value="4.5">Normaal (4,5 km/u)</option>
+            <option value="5.5">Stevig (5,5 km/u)</option>
+          </select>
+        </label>
+
+        <div class="primary-row">
+          <button id="saveBtn" type="button" class="btn primary">Opslaan</button>
+          <button id="gpxBtn" type="button" class="btn">Deel als GPX</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="listSheet" class="sheet" aria-label="Mijn wandelingen" hidden>
+    <div class="sheet-head">
+      <h2>Mijn wandelingen</h2>
+      <button id="listClose" class="icon-btn" type="button" aria-label="Sluiten"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <ul id="routeList" class="route-list"></ul>
+    <p id="listEmpty" class="note" hidden>Je hebt nog geen wandelingen opgeslagen. Plan een route en tik op Opslaan.</p>
+  </section>
+
+  <dialog id="saveDialog">
+    <form method="dialog" id="saveForm">
+      <h2>Wandeling opslaan</h2>
+      <label for="nameInput">Naam</label>
+      <input id="nameInput" type="text" maxlength="60" autocomplete="off" required>
+      <div class="dialog-row">
+        <button type="button" id="saveCancel" class="btn">Annuleren</button>
+        <button type="submit" class="btn primary">Opslaan</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
